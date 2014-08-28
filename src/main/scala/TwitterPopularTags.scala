@@ -131,22 +131,20 @@ case class Tweet (
 				.mkString("\t")
 		}		
 		val userDetails = stream.map(s => formatStatus(s))
-		// My code for collecting user details: (now replaced with elegant code from https://github.com/pwendell/spark-twitter-collection/blob/master/TwitterCollector.scala
-		//val userDetails =( stream.map(user => "@" + user.getUser().getScreenName() + "," + user.getUser().getName()+ "," + user.getUser().getLocation() + "," + user.getUser().getLang() + "," + user.getUser().getFollowersCount() + "," + user.getUser().getFriendsCount() + "," + user.getUser().getFavouritesCount()) )
-//		userDetails.print()
 
 		 // Coalesce each batch into 1 partition
 		val coalesced = userDetails.transform(rdd => rdd.coalesce(1))
-		coalesced.foreachRDD( rdd => { 
-						/*(rdd, time) => rdd.saveAsTextFile("tweets_%s".format(time))*/
-		val mapCol = rdd.map(_.split("\t")).map(t => Tweet( t(0), t(1), t (2), t(3), t(4), t(5), t(6), t(7), t(8), t(9))) 
-		mapCol.registerAsTable("tweet")
-		val fromCountries = sqlContext.sql("SELECT  user_location, COUNT(*) from tweet GROUP BY user_location")
-		        //val fromCountries = sqlContext.sql("SELECT user_name, user_location from tweet")
-		        fromCountries.map(col => "name: " + col(0) + " loc: " + col(1)  ).collect().foreach(println)
-					}
-						)
+		coalesced.foreachRDD( (rdd, time) => rdd.saveAsTextFile("tweets_%s".format(time)))
 		
+		/*coalesced.foreachRDD( rdd => {
+							val mapCol = rdd.map(_.split("\t")).map(t => Tweet( t(0), t(1), t (2), t(3), t(4), t(5), t(6), t(7), t(8), t(9))) 
+							mapCol.registerAsTable("tweet")
+							val fromCountries = sqlContext.sql("SELECT  user_location, COUNT(*) from tweet GROUP BY user_location")
+		        			//val fromCountries = sqlContext.sql("SELECT user_name, user_location from tweet")
+		        			fromCountries.map(col => "name: " + col(0) + " loc: " + col(1)  ).collect().foreach(println)
+							}
+						)
+		*/
 
 		//script to combine output files: cat part-000* | awk -F "," '{print $1}' | sort -n | uniq -c > myout.txt
 	    //usersCol.foreachRDD( rdd => rdd.saveAsParquetFile("tweets_table%s.parquet".format(java.lang.System.currentTimeMillis())))
