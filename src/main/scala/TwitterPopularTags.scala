@@ -16,6 +16,37 @@ import java.io._
  *
  */
 object TwitterPopularTags {
+
+
+case class Tweet (
+		/*id: String,
+		//reply_status_id: Int,
+		//reply_user_id: Int,
+		retweet_count: Int,*/
+		text: String,
+		/*//latitude: Float,
+		  //longitude: Float,
+		  source: String,
+		  user_id: Int,
+		  */
+		user_name: String,
+		user_screen_name: String,
+		user_created_at: String,
+		user_followers: String,
+		user_favorites: String,
+		user_language: String,
+		user_location: String,
+		user_timezone: String,
+		created_at: String
+		/*,
+		created_at_year: Int,
+		created_at_month: Int,
+		created_at_day: Int,
+		created_at_hour: Int,
+		created_at_minute: Int,
+		created_at_second: Int*/)
+
+
 	def main(args: Array[String]) {
 
     	StreamingExamples.setStreamingLogLevels()
@@ -30,7 +61,6 @@ object TwitterPopularTags {
     	val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 	    import sqlContext.createSchemaRDD
 
-	  	case class Tweets(UserName: String, UserLocation: String, NumofFollowers: Int, NumofFriends: Int, NumofFavorites: Int)
 		//val theTweets: RDD[Tweets] = ...
 		//theTweets.saveAsParquetFile("myTweets.parquet")
 
@@ -107,8 +137,17 @@ object TwitterPopularTags {
 
 		 // Coalesce each batch into 1 partition
 		val coalesced = userDetails.transform(rdd => rdd.coalesce(1))
-		coalesced.foreachRDD( (rdd, time) => rdd.saveAsTextFile("tweets_%s".format(time)))
+		coalesced.foreachRDD( rdd => { 
+						/*(rdd, time) => rdd.saveAsTextFile("tweets_%s".format(time))*/
+		val mapCol = rdd.map(_.split("\t")).map(t => Tweet( t(0), t(1), t (2), t(3), t(4), t(5), t(6), t(7), t(8), t(9))) 
+		mapCol.registerAsTable("tweet")
+		val fromCountries = sqlContext.sql("SELECT  user_location, COUNT(*) from tweet GROUP BY user_location")
+		        //val fromCountries = sqlContext.sql("SELECT user_name, user_location from tweet")
+		        fromCountries.map(col => "name: " + col(0) + " loc: " + col(1)  ).collect().foreach(println)
+					}
+						)
 		
+
 		//script to combine output files: cat part-000* | awk -F "," '{print $1}' | sort -n | uniq -c > myout.txt
 	    //usersCol.foreachRDD( rdd => rdd.saveAsParquetFile("tweets_table%s.parquet".format(java.lang.System.currentTimeMillis())))
 		val hashTags = stream.flatMap(status => status.getText.split(" ").filter(_.startsWith("#")))
